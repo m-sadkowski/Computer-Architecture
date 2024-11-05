@@ -1,0 +1,97 @@
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/05/24 19:23:04
+code.asm						     Page 1 - 1
+
+
+				.686
+				.model flat
+				extern _ExitProcess@4 : PROC
+				extern _MessageBoxA@16 : PROC 
+				public _main
+
+ 00000000			.data
+ 00000000  00000050 [			wynik db 80 dup (?)
+	    00
+	   ]
+ 00000050 0A				nowa_linia db 10 
+ 00000051 0A 57 79 6E 69		tytul db 10, 'Wynik', 0 
+	   6B 00
+
+ 00000000			.code
+ 00000000				_main PROC
+
+ 00000000  BA 00000000				mov edx, 0		; Starsza czÍúÊ dzielnej (0) do EAX (32-bitowy rejestr)
+ 00000005  B8 0000002A				mov eax, 42		; M≥odsza czÍúÊ dzielnej (42) do EAX (32-bitowy rejestr) -> (64-bitowy rejestr EDX:EAX z liczbπ 0 42)
+
+ 0000000A  BB 00000006				mov ebx, 6		; Dzielnik (6) do EBX (32-bitowy rejestr)
+ 0000000F  F7 F3				div ebx			; Dzielenie: EAX = EDX:EAX / EBX, EDX = reszta 
+
+						; Konwersja liczby w EAX na ASCII
+ 00000011  B9 0000000A				mov ecx, 10       ; Baza dziesiÍtna
+ 00000016  8D 3D 00000000 R			lea edi, wynik    ; Ustawienie wskaünika na wynik
+ 0000001C  83 C7 4F				add edi, 79       ; PrzesuniÍcie wskaünika na koniec bufora (rezerwa na zapis liczby od ty≥u)
+ 0000001F  C6 07 00				mov byte ptr [edi], 0 ; ZakoÒczenie ciπgu zerem (terminator)
+
+ 00000022				konwersja_petla:
+ 00000022  33 D2				xor edx, edx      ; Wyzerowanie EDX (potrzebne do div)
+ 00000024  F7 F1				div ecx           ; EAX / 10, wynik w EAX, reszta w EDX
+ 00000026  80 C2 30				add dl, '0'       ; Zamiana reszty na znak ASCII
+ 00000029  4F					dec edi           ; PrzesuniÍcie wskaünika w lewo
+ 0000002A  88 17				mov [edi], dl     ; Zapisanie znaku do bufora
+ 0000002C  85 C0				test eax, eax     ; Sprawdzenie, czy wynik to 0
+ 0000002E  75 F2				jnz konwersja_petla ; Kontynuacja, jeúli nie
+
+						; Wywo≥anie MessageBox z poprawnym wskaünikiem na wynik
+ 00000030  6A 00				push 0
+ 00000032  68 00000051 R			push OFFSET tytul
+ 00000037  57					push edi          ; Uøycie wskaünika na poczπtek liczby w buforze
+ 00000038  6A 00				push 0
+ 0000003A  E8 00000000 E			call _MessageBoxA@16 
+ 0000003F  83 C4 10				add esp, 16
+
+ 00000042  E8 00000000 E			call _ExitProcess@4
+ 00000047				_main ENDP
+				END
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/05/24 19:23:04
+code.asm						     Symbols 2 - 1
+
+
+
+
+Segments and Groups:
+
+                N a m e                 Size     Length   Align   Combine Class
+
+FLAT . . . . . . . . . . . . . .	GROUP
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000058 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 00000047 Para	  Public  'CODE'	
+
+
+Procedures, parameters, and locals:
+
+                N a m e                 Type     Value    Attr
+
+_main  . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000047 Public
+  konwersja_petla  . . . . . . .	L Near	 00000022 _TEXT	
+
+
+Symbols:
+
+                N a m e                 Type     Value    Attr
+
+@CodeSize  . . . . . . . . . . .	Number	 00000000h   
+@DataSize  . . . . . . . . . . .	Number	 00000000h   
+@Interface . . . . . . . . . . .	Number	 00000000h   
+@Model . . . . . . . . . . . . .	Number	 00000007h   
+@code  . . . . . . . . . . . . .	Text   	 _TEXT
+@data  . . . . . . . . . . . . .	Text   	 FLAT
+@fardata?  . . . . . . . . . . .	Text   	 FLAT
+@fardata . . . . . . . . . . . .	Text   	 FLAT
+@stack . . . . . . . . . . . . .	Text   	 FLAT
+_ExitProcess@4 . . . . . . . . .	L Near	 00000000 FLAT	External
+_MessageBoxA@16  . . . . . . . .	L Near	 00000000 FLAT	External
+nowa_linia . . . . . . . . . . .	Byte	 00000050 _DATA	
+tytul  . . . . . . . . . . . . .	Byte	 00000051 _DATA	
+wynik  . . . . . . . . . . . . .	Byte	 00000000 _DATA	
+
+	   0 Warnings
+	   0 Errors
