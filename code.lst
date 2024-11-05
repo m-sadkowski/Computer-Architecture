@@ -1,73 +1,80 @@
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/05/24 19:31:20
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/05/24 19:47:29
 code.asm						     Page 1 - 1
 
 
-				; Program w asemblerze, w którym nastêpuje konwersja 
-				; liczby binarnej bez znaku zawartej w rejestrze EAX na ci¹g cyfr dziesiêtnych tej liczby.
-				; Uzyskiwane cyfry s¹ przekszta³cane na kod ASCII, a nastêpnie wyœwietlane na ekranie. W
-				; trakcie analizy podanego ni¿ej kodu nale¿y braæ pod uwagê maksymaln¹ zawartoœæ rejestru
-				; EAX, która mo¿e wynosiæ 232^(-1) = 4 294 967 295 (10 cyfr dziesiêtnych).
-
 				.686
 				.model flat
-				extern _ExitProcess@4 : PROC
-				extern _MessageBoxA@16 : PROC 
 				extern __write : PROC
+				extern _ExitProcess@4 : PROC
+
 				public _main
 
  00000000			.data
-					; deklaracja tablicy 12-bajtowej do przechowywania
-					; tworzonych cyfr
  00000000  0000000C [			znaki db 12 dup (?)
 	    00
 	   ]
 
  00000000			.code
- 00000000				_main PROC
+ 00000000				wyswietl_EAX PROC
+ 00000000  60					pusha ; zapisanie rejestrów ogólnych
 
- 00000000  B8 0000000D				mov eax, 1101b ; liczba do konwersji (max 32 bitów, 10 cyfr)
+ 00000001  BE 0000000A				mov esi, 10 ; indeks w tablicy 'znaki'
+ 00000006  BB 0000000A				mov ebx, 10 ; dzielnik równy 10
 
- 00000005  BE 0000000A				mov esi, 10 ; indeks w tablicy 'znaki'
- 0000000A  BB 0000000A				mov ebx, 10 ; dzielnik równy 10
-
- 0000000F				konwersja:
- 0000000F  BA 00000000				mov edx, 0 ; zerowanie starszej czêœci dzielnej
- 00000014  F7 F3				div ebx ; dzielenie przez 10, reszta w EDX,
-						; iloraz w EAX
- 00000016  80 C2 30				add dl, 30H ; zamiana reszty z dzielenia na kod
-						; ASCII
- 00000019  88 96 00000000 R			mov znaki [esi], dl; zapisanie cyfry w kodzie ASCII
- 0000001F  4E					dec esi ; zmniejszenie indeksu
- 00000020  83 F8 00				cmp eax, 0 ; sprawdzenie czy iloraz = 0
- 00000023  75 EA				jne konwersja ; skok, gdy iloraz niezerowy
-						; wype³nienie pozosta³ych bajtów spacjami i wpisanie
-						; znaków nowego wiersza
-
- 00000025				wypeln:
- 00000025  83 FE 00				cmp esi, 0; sprawdzenie czy indeks = 0 (= cmp esi, 0)
- 00000028  74 0A				jz wyswietl ; skok, gdy ESI = 0
- 0000002A  C6 86 00000000 R			mov byte PTR znaki [esi], 20H ; kod spacji
+ 0000000B				konwersja:
+ 0000000B  BA 00000000				mov edx, 0 ; zerowanie starszej czêœci dzielnej
+ 00000010  F7 F3				div ebx ; dzielenie przez 10, reszta w EDX, iloraz w EAX
+ 00000012  80 C2 30				add dl, 30H ; zamiana reszty z dzielenia na kod ASCII
+ 00000015  88 96 00000000 R			mov znaki [esi], dl; zapisanie cyfry w kodzie ASCII
+ 0000001B  4E					dec esi ; zmniejszenie indeksu
+ 0000001C  83 F8 00				cmp eax, 0 ; sprawdzenie czy iloraz = 0
+ 0000001F  75 EA				jne konwersja ; skok, gdy iloraz niezerowy
+						
+						 ; wype³nienie pozosta³ych bajtów spacjami i wpisanie znaków nowego wiersza
+ 00000021				wypeln:
+ 00000021  0B F6				or esi, esi
+ 00000023  74 0A				jz wyswietl ; skok, gdy ESI = 0
+ 00000025  C6 86 00000000 R			mov byte PTR znaki [esi], 20H ; kod spacji
 	   20
- 00000031  4E					dec esi ; zmniejszenie indeksu
- 00000032  EB F1				jmp wypeln
+ 0000002C  4E					dec esi ; zmniejszenie indeksu
+ 0000002D  EB F2				jmp wypeln
 
- 00000034				wyswietl:
- 00000034  C6 05 00000000 R			mov byte PTR znaki [0], 0AH ; kod nowego wiersza
+ 0000002F				wyswietl:
+ 0000002F  C6 05 00000000 R			mov byte PTR znaki [0], 0AH ; kod nowego wiersza
 	   0A
- 0000003B  C6 05 0000000B R			mov byte PTR znaki [11], 0AH ; kod nowego wiersza
+ 00000036  C6 05 0000000B R			mov byte PTR znaki [11], 0AH ; kod nowego wiersza
 	   0A
-
 						; wyœwietlenie cyfr na ekranie
- 00000042  68 0000000C				push dword PTR 12 ; liczba wyœwietlanych znaków
- 00000047  68 00000000 R			push dword PTR OFFSET znaki ; adres wyœw. obszaru
- 0000004C  68 00000001				push dword PTR 1; numer urz¹dzenia (ekran ma numer 1)
- 00000051  E8 00000000 E			call __write ; wyœwietlenie liczby na ekranie
- 00000056  83 C4 0C				add esp, 12 ; usuniêcie parametrów ze stosu
+ 0000003D  68 0000000C				push dword PTR 12 ; liczba wyœwietlanych znaków
+ 00000042  68 00000000 R			push dword PTR OFFSET znaki ; adres wyœw. obszaru
+ 00000047  68 00000001				push dword PTR 1; numer urz¹dzenia (ekran ma numer 1)
+ 0000004C  E8 00000000 E			call __write ; wyœwietlenie liczby na ekranie
+ 00000051  83 C4 0C				add esp, 12 ; usuniêcie parametrów ze stosu
 
- 00000059  E8 00000000 E			call _ExitProcess@4
- 0000005E				_main ENDP
+ 00000054  61					popa ; przywrócenie rejestrów ogólnych
+ 00000055  C3					ret ; powrót do miejsca wywo³ania
+ 00000056				wyswietl_EAX ENDP
+
+ 00000056				_main PROC
+ 00000056  B8 00000001				mov eax, 1
+ 0000005B  BB 00000000				mov ebx, 0
+ 00000060  BE 00000032				mov esi, 50
+
+ 00000065				ptl:
+ 00000065  03 C3				add eax, ebx
+ 00000067  E8 FFFFFF94				call wyswietl_EAX
+ 0000006C  43					inc ebx
+ 0000006D  4E					dec esi
+ 0000006E  83 FE 00				cmp esi, 0
+ 00000071  75 F2				jne ptl
+						
+
+ 00000073  6A 00				push 0
+ 00000075  E8 00000000 E			call _ExitProcess@4
+ 0000007A				_main ENDP
+
 				END
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/05/24 19:31:20
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/05/24 19:47:29
 code.asm						     Symbols 2 - 1
 
 
@@ -79,17 +86,19 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 _DATA  . . . . . . . . . . . . .	32 Bit	 0000000C Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 0000005E Para	  Public  'CODE'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000007A Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
 
                 N a m e                 Type     Value    Attr
 
-_main  . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000005E Public
-  konwersja  . . . . . . . . . .	L Near	 0000000F _TEXT	
-  wypeln . . . . . . . . . . . .	L Near	 00000025 _TEXT	
-  wyswietl . . . . . . . . . . .	L Near	 00000034 _TEXT	
+_main  . . . . . . . . . . . . .	P Near	 00000056 _TEXT	Length= 00000024 Public
+  ptl  . . . . . . . . . . . . .	L Near	 00000065 _TEXT	
+wyswietl_EAX . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000056 Public
+  konwersja  . . . . . . . . . .	L Near	 0000000B _TEXT	
+  wypeln . . . . . . . . . . . .	L Near	 00000021 _TEXT	
+  wyswietl . . . . . . . . . . .	L Near	 0000002F _TEXT	
 
 
 Symbols:
@@ -106,7 +115,6 @@ Symbols:
 @fardata . . . . . . . . . . . .	Text   	 FLAT
 @stack . . . . . . . . . . . . .	Text   	 FLAT
 _ExitProcess@4 . . . . . . . . .	L Near	 00000000 FLAT	External
-_MessageBoxA@16  . . . . . . . .	L Near	 00000000 FLAT	External
 __write  . . . . . . . . . . . .	L Near	 00000000 FLAT	External
 znaki  . . . . . . . . . . . . .	Byte	 00000000 _DATA	
 

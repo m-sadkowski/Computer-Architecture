@@ -19,7 +19,7 @@ public _main
 .code
 	_main PROC
 
-		mov eax, 1234 ; liczba do konwersji (max 32 bitów, 10 cyfr)
+		mov eax, 1101b ; liczba do konwersji (max 32 bitów, 10 cyfr)
 
 		mov esi, 10 ; indeks w tablicy 'znaki'
 		mov ebx, 10 ; dzielnik równy 10
@@ -38,7 +38,7 @@ public _main
 		; znaków nowego wiersza
 
 	wypeln:
-		or esi, esi
+		or esi, esi ; sprawdzenie czy indeks = 0 (= cmp esi, 0)
 		jz wyswietl ; skok, gdy ESI = 0
 		mov byte PTR znaki [esi], 20H ; kod spacji
 		dec esi ; zmniejszenie indeksu
