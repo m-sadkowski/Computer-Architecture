@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/05/24 19:23:04
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/05/24 19:27:08
 code.asm						     Page 1 - 1
 
 
@@ -6,52 +6,62 @@ code.asm						     Page 1 - 1
 				.model flat
 				extern _ExitProcess@4 : PROC
 				extern _MessageBoxA@16 : PROC 
+				extern __write : PROC
 				public _main
 
  00000000			.data
- 00000000  00000050 [			wynik db 80 dup (?)
+					; deklaracja tablicy 12-bajtowej do przechowywania
+					; tworzonych cyfr
+ 00000000  0000000C [			znaki db 12 dup (?)
 	    00
 	   ]
- 00000050 0A				nowa_linia db 10 
- 00000051 0A 57 79 6E 69		tytul db 10, 'Wynik', 0 
-	   6B 00
 
  00000000			.code
  00000000				_main PROC
 
- 00000000  BA 00000000				mov edx, 0		; Starsza czêœæ dzielnej (0) do EAX (32-bitowy rejestr)
- 00000005  B8 0000002A				mov eax, 42		; M³odsza czêœæ dzielnej (42) do EAX (32-bitowy rejestr) -> (64-bitowy rejestr EDX:EAX z liczb¹ 0 42)
+ 00000000  B8 000004D2				mov eax, 1234 ; liczba do konwersji (max 32 bitów, 10 cyfr)
 
- 0000000A  BB 00000006				mov ebx, 6		; Dzielnik (6) do EBX (32-bitowy rejestr)
- 0000000F  F7 F3				div ebx			; Dzielenie: EAX = EDX:EAX / EBX, EDX = reszta 
+ 00000005  BE 0000000A				mov esi, 10 ; indeks w tablicy 'znaki'
+ 0000000A  BB 0000000A				mov ebx, 10 ; dzielnik równy 10
 
-						; Konwersja liczby w EAX na ASCII
- 00000011  B9 0000000A				mov ecx, 10       ; Baza dziesiêtna
- 00000016  8D 3D 00000000 R			lea edi, wynik    ; Ustawienie wskaŸnika na wynik
- 0000001C  83 C7 4F				add edi, 79       ; Przesuniêcie wskaŸnika na koniec bufora (rezerwa na zapis liczby od ty³u)
- 0000001F  C6 07 00				mov byte ptr [edi], 0 ; Zakoñczenie ci¹gu zerem (terminator)
+ 0000000F				konwersja:
+ 0000000F  BA 00000000				mov edx, 0 ; zerowanie starszej czêœci dzielnej
+ 00000014  F7 F3				div ebx ; dzielenie przez 10, reszta w EDX,
+						; iloraz w EAX
+ 00000016  80 C2 30				add dl, 30H ; zamiana reszty z dzielenia na kod
+						; ASCII
+ 00000019  88 96 00000000 R			mov znaki [esi], dl; zapisanie cyfry w kodzie ASCII
+ 0000001F  4E					dec esi ; zmniejszenie indeksu
+ 00000020  83 F8 00				cmp eax, 0 ; sprawdzenie czy iloraz = 0
+ 00000023  75 EA				jne konwersja ; skok, gdy iloraz niezerowy
+						; wype³nienie pozosta³ych bajtów spacjami i wpisanie
+						; znaków nowego wiersza
 
- 00000022				konwersja_petla:
- 00000022  33 D2				xor edx, edx      ; Wyzerowanie EDX (potrzebne do div)
- 00000024  F7 F1				div ecx           ; EAX / 10, wynik w EAX, reszta w EDX
- 00000026  80 C2 30				add dl, '0'       ; Zamiana reszty na znak ASCII
- 00000029  4F					dec edi           ; Przesuniêcie wskaŸnika w lewo
- 0000002A  88 17				mov [edi], dl     ; Zapisanie znaku do bufora
- 0000002C  85 C0				test eax, eax     ; Sprawdzenie, czy wynik to 0
- 0000002E  75 F2				jnz konwersja_petla ; Kontynuacja, jeœli nie
+ 00000025				wypeln:
+ 00000025  0B F6				or esi, esi
+ 00000027  74 0A				jz wyswietl ; skok, gdy ESI = 0
+ 00000029  C6 86 00000000 R			mov byte PTR znaki [esi], 20H ; kod spacji
+	   20
+ 00000030  4E					dec esi ; zmniejszenie indeksu
+ 00000031  EB F2				jmp wypeln
 
-						; Wywo³anie MessageBox z poprawnym wskaŸnikiem na wynik
- 00000030  6A 00				push 0
- 00000032  68 00000051 R			push OFFSET tytul
- 00000037  57					push edi          ; U¿ycie wskaŸnika na pocz¹tek liczby w buforze
- 00000038  6A 00				push 0
- 0000003A  E8 00000000 E			call _MessageBoxA@16 
- 0000003F  83 C4 10				add esp, 16
+ 00000033				wyswietl:
+ 00000033  C6 05 00000000 R			mov byte PTR znaki [0], 0AH ; kod nowego wiersza
+	   0A
+ 0000003A  C6 05 0000000B R			mov byte PTR znaki [11], 0AH ; kod nowego wiersza
+	   0A
 
- 00000042  E8 00000000 E			call _ExitProcess@4
- 00000047				_main ENDP
+						; wyœwietlenie cyfr na ekranie
+ 00000041  68 0000000C				push dword PTR 12 ; liczba wyœwietlanych znaków
+ 00000046  68 00000000 R			push dword PTR OFFSET znaki ; adres wyœw. obszaru
+ 0000004B  68 00000001				push dword PTR 1; numer urz¹dzenia (ekran ma numer 1)
+ 00000050  E8 00000000 E			call __write ; wyœwietlenie liczby na ekranie
+ 00000055  83 C4 0C				add esp, 12 ; usuniêcie parametrów ze stosu
+
+ 00000058  E8 00000000 E			call _ExitProcess@4
+ 0000005D				_main ENDP
 				END
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/05/24 19:23:04
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/05/24 19:27:08
 code.asm						     Symbols 2 - 1
 
 
@@ -62,16 +72,18 @@ Segments and Groups:
                 N a m e                 Size     Length   Align   Combine Class
 
 FLAT . . . . . . . . . . . . . .	GROUP
-_DATA  . . . . . . . . . . . . .	32 Bit	 00000058 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 00000047 Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 0000000C Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000005D Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
 
                 N a m e                 Type     Value    Attr
 
-_main  . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000047 Public
-  konwersja_petla  . . . . . . .	L Near	 00000022 _TEXT	
+_main  . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000005D Public
+  konwersja  . . . . . . . . . .	L Near	 0000000F _TEXT	
+  wypeln . . . . . . . . . . . .	L Near	 00000025 _TEXT	
+  wyswietl . . . . . . . . . . .	L Near	 00000033 _TEXT	
 
 
 Symbols:
@@ -89,9 +101,8 @@ Symbols:
 @stack . . . . . . . . . . . . .	Text   	 FLAT
 _ExitProcess@4 . . . . . . . . .	L Near	 00000000 FLAT	External
 _MessageBoxA@16  . . . . . . . .	L Near	 00000000 FLAT	External
-nowa_linia . . . . . . . . . . .	Byte	 00000050 _DATA	
-tytul  . . . . . . . . . . . . .	Byte	 00000051 _DATA	
-wynik  . . . . . . . . . . . . .	Byte	 00000000 _DATA	
+__write  . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+znaki  . . . . . . . . . . . . .	Byte	 00000000 _DATA	
 
 	   0 Warnings
 	   0 Errors
