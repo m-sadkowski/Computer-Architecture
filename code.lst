@@ -1,12 +1,10 @@
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/13/24 19:53:06
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/13/24 20:34:40
 code.asm						     Page 1 - 1
 
 
-				; zad 3.2
-				; wczytywanie liczby dziesiętnej z klawiatury – po
-				; wprowadzeniu cyfr należy nacisnąć klawisz Enter
-				; liczba po konwersji na postać binarną zostaje wpisana
-				; do rejestru EAX
+				; zad 3.4
+				; Napisać program w asemblerze, który wczyta liczbę dziesiętną z klawiatury i
+				; wyświetli na ekranie jej reprezentację w systemie szesnastkowym
 
 				.686
 				.model flat
@@ -22,130 +20,137 @@ code.asm						     Page 1 - 1
 	    00
 	   ]
  0000000C 0000000A			dziesiec dd 10 ; mnożnik
- 00000010  0000000C [			znaki db 12 dup (?) ; tablica do przechowywania znaków ASCII
-	    00
-	   ]
+ 00000010 30 31 32 33 34		dekoder db '0123456789ABCDEF' ; tablica do konwersji na postać szesnastkową
+	   35 36 37 38 39
+	   41 42 43 44 45
+	   46
 
  00000000			.code
- 00000000				wyswietl_EAX PROC
- 00000000  60					pusha ; zapisanie rejestrów ogólnych
+ 00000000				wyswietl_EAX_hex PROC
+						; wyświetlanie zawartości rejestru EAX
+						; w postaci liczby szesnastkowej
+ 00000000  60					pusha ; przechowanie rejestrów
 
- 00000001  BE 0000000A				mov esi, 10 ; indeks w tablicy 'znaki'
- 00000006  BB 0000000A				mov ebx, 10 ; dzielnik równy 10
+						; rezerwacja 12 bajtów na stosie (poprzez zmniejszenie
+						; rejestru ESP) przeznaczonych na tymczasowe przechowanie
+						; cyfr szesnastkowych wyświetlanej liczby
+ 00000001  83 EC 0C				sub esp, 12
+ 00000004  8B FC				mov edi, esp ; adres zarezerwowanego obszaru
+						; pamięci
+						; przygotowanie konwersji
+ 00000006  B9 00000008				mov ecx, 8 ; liczba obiegów pętli konwersji
+ 0000000B  BE 00000001				mov esi, 1 ; indeks początkowy używany przy
+						; zapisie cyfr
+						; pętla konwersji
+ 00000010					ptl3hex:
+						; przesunięcie cykliczne (obrót) rejestru EAX o 4 bity w lewo
+						; w szczególności, w pierwszym obiegu pętli bity nr 31 - 28
+						; rejestru EAX zostaną przesunięte na pozycje 3 - 0
+ 00000010  C1 C0 04				rol eax, 4
+						; wyodrębnienie 4 najmłodszych bitów i odczytanie z tablicy
+						; 'dekoder' odpowiadającej im cyfry w zapisie szesnastkowym
+ 00000013  8B D8				mov ebx, eax ; kopiowanie EAX do EBX
+ 00000015  83 E3 0F				and ebx, 0000000FH ; zerowanie bitów 31 - 4 rej.EBX
 
- 0000000B				konwersja:
- 0000000B  BA 00000000				mov edx, 0 ; zerowanie starszej części dzielnej
- 00000010  F7 F3				div ebx ; dzielenie przez 10, reszta w EDX, iloraz w EAX
- 00000012  80 C2 30				add dl, 30H ; zamiana reszty z dzielenia na kod ASCII
- 00000015  88 96 00000010 R			mov znaki [esi], dl; zapisanie cyfry w kodzie ASCII
- 0000001B  4E					dec esi ; zmniejszenie indeksu
- 0000001C  83 F8 00				cmp eax, 0 ; sprawdzenie czy iloraz = 0
- 0000001F  75 EA				jne konwersja ; skok, gdy iloraz niezerowy
-						
-						 ; wypełnienie pozostałych bajtów spacjami i wpisanie znaków nowego wiersza
- 00000021				wypeln:
- 00000021  0B F6				or esi, esi
- 00000023  74 0A				jz wyswietl ; skok, gdy ESI = 0
- 00000025  C6 86 00000010 R			mov byte PTR znaki [esi], 20H ; kod spacji
-	   20
- 0000002C  4E					dec esi ; zmniejszenie indeksu
- 0000002D  EB F2				jmp wypeln
+ 00000018  8A 93 00000010 R			mov dl, dekoder[ebx] ; pobranie cyfry z tablicy
+						; przesłanie cyfry do obszaru roboczego
+ 0000001E  88 14 37				mov [edi][esi], dl
+ 00000021  46					inc esi ;inkrementacja modyfikatora
+ 00000022  E2 EC				loop ptl3hex ; sterowanie pętlą
 
- 0000002F				wyswietl:
- 0000002F  C6 05 00000010 R			mov byte PTR znaki [0], 0AH ; kod nowego wiersza
-	   0A
- 00000036  C6 05 0000001B R			mov byte PTR znaki [11], 0AH ; kod nowego wiersza
-	   0A
-						; wyświetlenie cyfr na ekranie
- 0000003D  68 0000000C				push dword PTR 12 ; liczba wyświetlanych znaków
- 00000042  68 00000010 R			push dword PTR OFFSET znaki ; adres wyśw. obszaru
- 00000047  68 00000001				push dword PTR 1; numer urządzenia (ekran ma numer 1)
- 0000004C  E8 00000000 E			call __write ; wyświetlenie liczby na ekranie
- 00000051  83 C4 0C				add esp, 12 ; usunięcie parametrów ze stosu
+						; wpisanie znaku nowego wiersza przed i po cyfrach
+ 00000024  C6 07 0A				mov byte PTR [edi][0], 10
+ 00000027  C6 47 09 0A				mov byte PTR [edi][9], 10
 
- 00000054  61					popa ; przywrócenie rejestrów ogólnych
- 00000055  C3					ret ; powrót do miejsca wywołania
- 00000056				wyswietl_EAX ENDP
+						; zamiana zer na spacje
 
- 00000056				wczytaj_do_EAX PROC
+ 0000002B  B9 0000000A				mov ecx, 10 ; liczba obiegów pętli
+ 00000030  BE 00000001				mov esi, 1 ; indeks początkowy
+ 00000035				ptlzera:
+ 00000035  80 3C 37 30				cmp byte PTR [edi][esi], 30H ; sprawdzenie czy cyfra to 0
+ 00000039  74 02				je byl_zero ; skok, gdy napotkano 0
+ 0000003B  EB 07				jmp koniec_zer
+ 0000003D				byl_zero:
+ 0000003D  C6 04 37 20				mov byte PTR [edi][esi], 20H ; zamiana 0 na spację
+ 00000041  46					inc esi ; inkrementacja indeksu
+ 00000042  E2 F1				loop ptlzera ; sterowanie pętlą
+ 00000044				koniec_zer:
+
+
+						; wyświetlenie przygotowanych cyfr
+ 00000044  6A 0A				push 10 ; 8 cyfr + 2 znaki nowego wiersza
+ 00000046  57					push edi ; adres obszaru roboczego
+ 00000047  6A 01				push 1 ; nr urządzenia (tu: ekran)
+ 00000049  E8 00000000 E			call __write ; wyświetlenie
+						; usunięcie ze stosu 24 bajtów, w tym 12 bajtów zapisanych
+						; przez 3 rozkazy push przed rozkazem call
+						; i 12 bajtów zarezerwowanych na początku podprogramu
+ 0000004E  83 C4 18				add esp, 24
+
+ 00000051  61					popa ; odtworzenie rejestrów
+ 00000052  C3					ret ; powrót z podprogramu
+ 00000053				wyswietl_EAX_hex ENDP
+
+
+ 00000053				wczytaj_do_EAX PROC
 						; zapisanie rejestrów ogólnych na stosie
- 00000056  53					push ebx
- 00000057  51					push ecx
- 00000058  52					push edx
- 00000059  56					push esi
- 0000005A  57					push edi
- 0000005B  55					push ebp
+ 00000053  53					push ebx
+ 00000054  51					push ecx
+ 00000055  52					push edx
+ 00000056  56					push esi
+ 00000057  57					push edi
+ 00000058  55					push ebp
 
 						; max ilość znaków wczytywanej liczby
- 0000005C  68 0000000C				push dword PTR 12
- 00000061  68 00000000 R			push dword PTR OFFSET obszar ; adres obszaru pamięci
- 00000066  68 00000000				push dword PTR 0; numer urządzenia (0 dla klawiatury)
- 0000006B  E8 00000000 E			call __read ; odczytywanie znaków z klawiatury
+ 00000059  68 0000000C				push dword PTR 12
+ 0000005E  68 00000000 R			push dword PTR OFFSET obszar ; adres obszaru pamięci
+ 00000063  68 00000000				push dword PTR 0; numer urządzenia (0 dla klawiatury)
+ 00000068  E8 00000000 E			call __read ; odczytywanie znaków z klawiatury
 						; (dwa znaki podkreślenia przed read)
- 00000070  83 C4 0C				add esp, 12 ; usunięcie parametrów ze stosu
+ 0000006D  83 C4 0C				add esp, 12 ; usunięcie parametrów ze stosu
 						; bieżąca wartość przekształcanej liczby przechowywana jest
 						; w rejestrze EAX; przyjmujemy 0 jako wartość początkową
- 00000073  B8 00000000				mov eax, 0
- 00000078  BB 00000000 R			mov ebx, OFFSET obszar ; adres obszaru ze znakami
+ 00000070  B8 00000000				mov eax, 0
+ 00000075  BB 00000000 R			mov ebx, OFFSET obszar ; adres obszaru ze znakami
 
- 0000007D				pobieraj_znaki:
- 0000007D  8A 0B				mov cl, [ebx] ; pobranie kolejnej cyfry w kodzie
+ 0000007A				pobieraj_znaki:
+ 0000007A  8A 0B				mov cl, [ebx] ; pobranie kolejnej cyfry w kodzie
 						; ASCII
- 0000007F  43					inc ebx ; zwiększenie indeksu
- 00000080  80 F9 0A				cmp cl,10 ; sprawdzenie czy naciśnięto Enter
- 00000083  74 10				je byl_enter ; skok, gdy naciśnięto Enter
- 00000085  80 E9 30				sub cl, 30H ; zamiana kodu ASCII na wartość cyfry
- 00000088  0F B6 C9				movzx ecx, cl ; przechowanie wartości cyfry w
+ 0000007C  43					inc ebx ; zwiększenie indeksu
+ 0000007D  80 F9 0A				cmp cl,10 ; sprawdzenie czy naciśnięto Enter
+ 00000080  74 10				je byl_enter ; skok, gdy naciśnięto Enter
+ 00000082  80 E9 30				sub cl, 30H ; zamiana kodu ASCII na wartość cyfry
+ 00000085  0F B6 C9				movzx ecx, cl ; przechowanie wartości cyfry w
 						; rejestrze ECX
 						; mnożenie wcześniej obliczonej wartości razy 10
- 0000008B  F7 25 0000000C R			mul dword PTR dziesiec
- 00000091  03 C1				add eax, ecx ; dodanie ostatnio odczytanej cyfry
- 00000093  EB E8				jmp pobieraj_znaki ; skok na początek pętli
+ 00000088  F7 25 0000000C R			mul dword PTR dziesiec
+ 0000008E  03 C1				add eax, ecx ; dodanie ostatnio odczytanej cyfry
+ 00000090  EB E8				jmp pobieraj_znaki ; skok na początek pętli
 
- 00000095				byl_enter:
+ 00000092				byl_enter:
 
- 00000095  5D					pop ebp
- 00000096  5F					pop edi
- 00000097  5E					pop esi
- 00000098  5A					pop edx
- 00000099  59					pop ecx
- 0000009A  5B					pop ebx
- 0000009B  C3					ret ; powrót do miejsca wywołania
- 0000009C				wczytaj_do_EAX ENDP
+ 00000092  5D					pop ebp
+ 00000093  5F					pop edi
+ 00000094  5E					pop esi
+ 00000095  5A					pop edx
+ 00000096  59					pop ecx
+ 00000097  5B					pop ebx
+ 00000098  C3					ret ; powrót do miejsca wywołania
+ 00000099				wczytaj_do_EAX ENDP
 
- 0000009C				_main PROC
+ 00000099				_main PROC
 						 ;wywołanie procedury wczytaj_doEAX
- 0000009C  E8 FFFFFFB5				call wczytaj_do_EAX
+ 00000099  E8 FFFFFFB5				call wczytaj_do_EAX
 						;wywołanie procedury wyswietl_EAX
- 000000A1  F7 E0				mul EAX
- 000000A3  E8 FFFFFF58				call wyswietl_EAX
+ 0000009E  E8 FFFFFF5D				call wyswietl_EAX_hex
 
- 000000A8  6A 00				push 0
- 000000AA  E8 00000000 E			call _ExitProcess@4
- 000000AF				_main ENDP
+ 000000A3  6A 00				push 0
+ 000000A5  E8 00000000 E			call _ExitProcess@4
+ 000000AA				_main ENDP
 
 				END
 
-
-
-				; Program ten wczytuje liczbę dziesiętną z klawiatury, konwertuje ją na reprezentację binarną i zapisuje wynik w rejestrze EAX, 
-				; aby następnie wyświetlić go na ekranie. Proces ten składa się z kilku kroków:
-				;	1) Wczytanie liczby dziesiętnej z klawiatury:
-				;		Podprogram wczytaj_do_EAX odczytuje znaki wprowadzone z klawiatury, które reprezentują cyfry liczby dziesiętnej (zapisane w kodzie ASCII).
-				;		Dla każdej cyfry, kod ASCII jest konwertowany na wartość dziesiętną przez odjęcie wartości 30H (ASCII dla '0').
-				;		Następnie, bieżąca wartość w rejestrze EAX (gdzie budowana jest liczba) jest mnożona przez 10, po czym dodawana jest nowa cyfra. 
-				;		W ten sposób liczba jest budowana iteracyjnie na zasadzie: (((0⋅10+5)⋅10+8)⋅10+0)⋅10+4
-				;		Proces kończy się po naciśnięciu klawisza Enter (który wprowadza kod ASCII 10).
-				;	2) Wyświetlenie liczby:
-				;		Podprogram wyswietl_EAX konwertuje wynik w EAX na postać dziesiętną do wyświetlenia, przeprowadzając operacje dzielenia przez 10. Wartości reszt z dzielenia są przekształcane na kod ASCII i zapisywane w tablicy znaki.
-				;		Liczba w postaci znaków ASCII jest wyświetlana na ekranie przy pomocy funkcji __write.
-				;	3) Obsługa stosu:
-				;		Zamiast instrukcji pusha i popa, stosowane są instrukcje push i pop na początku i końcu procedury wczytaj_do_EAX dla odpowiednich rejestrów
-				;		(oprócz EAX i ESP). Jest to konieczne, ponieważ pusha i popa zapisują wszystkie rejestry, 
-				;		co może być niepotrzebne i zajmować dodatkową przestrzeń stosu.
-				;		W skrócie, program wczytuje liczbę dziesiętną, konwertuje ją na wartość binarną (która jest naturalnie obsługiwana przez procesor) 
-				;		i wyświetla ją na ekranie, umożliwiając konwersję liczb wprowadzanych z klawiatury w czasie rzeczywistym.
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/13/24 19:53:06
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/13/24 20:34:40
 code.asm						     Symbols 2 - 1
 
 
@@ -156,22 +161,23 @@ Segments and Groups:
                 N a m e                 Size     Length   Align   Combine Class
 
 FLAT . . . . . . . . . . . . . .	GROUP
-_DATA  . . . . . . . . . . . . .	32 Bit	 0000001C Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 000000AF Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000020 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 000000AA Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
 
                 N a m e                 Type     Value    Attr
 
-_main  . . . . . . . . . . . . .	P Near	 0000009C _TEXT	Length= 00000013 Public
-wczytaj_do_EAX . . . . . . . . .	P Near	 00000056 _TEXT	Length= 00000046 Public
-  pobieraj_znaki . . . . . . . .	L Near	 0000007D _TEXT	
-  byl_enter  . . . . . . . . . .	L Near	 00000095 _TEXT	
-wyswietl_EAX . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000056 Public
-  konwersja  . . . . . . . . . .	L Near	 0000000B _TEXT	
-  wypeln . . . . . . . . . . . .	L Near	 00000021 _TEXT	
-  wyswietl . . . . . . . . . . .	L Near	 0000002F _TEXT	
+_main  . . . . . . . . . . . . .	P Near	 00000099 _TEXT	Length= 00000011 Public
+wczytaj_do_EAX . . . . . . . . .	P Near	 00000053 _TEXT	Length= 00000046 Public
+  pobieraj_znaki . . . . . . . .	L Near	 0000007A _TEXT	
+  byl_enter  . . . . . . . . . .	L Near	 00000092 _TEXT	
+wyswietl_EAX_hex . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000053 Public
+  ptl3hex  . . . . . . . . . . .	L Near	 00000010 _TEXT	
+  ptlzera  . . . . . . . . . . .	L Near	 00000035 _TEXT	
+  byl_zero . . . . . . . . . . .	L Near	 0000003D _TEXT	
+  koniec_zer . . . . . . . . . .	L Near	 00000044 _TEXT	
 
 
 Symbols:
@@ -190,9 +196,9 @@ Symbols:
 _ExitProcess@4 . . . . . . . . .	L Near	 00000000 FLAT	External
 __read . . . . . . . . . . . . .	L Near	 00000000 FLAT	External
 __write  . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+dekoder  . . . . . . . . . . . .	Byte	 00000010 _DATA	
 dziesiec . . . . . . . . . . . .	DWord	 0000000C _DATA	
 obszar . . . . . . . . . . . . .	Byte	 00000000 _DATA	
-znaki  . . . . . . . . . . . . .	Byte	 00000010 _DATA	
 
 	   0 Warnings
 	   0 Errors
