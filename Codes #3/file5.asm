@@ -106,7 +106,6 @@ public _main
 		 ;wywołanie procedury wczytaj_doEAX
 		call wczytaj_do_EAX
 		;wywołanie procedury wyswietl_EAX
-		mul EAX
 		call wyswietl_EAX
 
 		push 0
@@ -118,7 +117,7 @@ END
 
 
 ; Program ten wczytuje liczbę dziesiętną z klawiatury, konwertuje ją na reprezentację binarną i zapisuje wynik w rejestrze EAX, 
-; aby następnie wyświetlić jego kwadrat na ekranie. Proces ten składa się z kilku kroków:
+; aby następnie wyświetlić go na ekranie. Proces ten składa się z kilku kroków:
 ;	1) Wczytanie liczby dziesiętnej z klawiatury:
 ;		Podprogram wczytaj_do_EAX odczytuje znaki wprowadzone z klawiatury, które reprezentują cyfry liczby dziesiętnej (zapisane w kodzie ASCII).
 ;		Dla każdej cyfry, kod ASCII jest konwertowany na wartość dziesiętną przez odjęcie wartości 30H (ASCII dla '0').
