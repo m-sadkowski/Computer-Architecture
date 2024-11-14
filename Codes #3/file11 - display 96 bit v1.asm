@@ -17,40 +17,25 @@ public _main
 	wyswietl_96bit PROC
 		pusha ; zapisanie rejestrów ogólnych
 
-		mov bl, 3 ; liczba rejestrów (3 * 32 bity = 96 bitów)
-		mov bh, 10
+		mov edi, 3 ; liczba rejestrów (3 * 32 bity = 96 bitów))
 
 		push ecx
 		push edx
 
 		mov esi, 30 ; indeks w tablicy 'obszar'
-		mov edi, 10 ; dzielnik równy 10
+		mov ebx, 10 ; dzielnik równy 10
 
 	konwersja:
 		mov edx, 0 ; zerowanie starszej części dzielnej
-		div edi ; dzielenie przez 10, reszta w EDX, iloraz w EAX
+		div ebx ; dzielenie przez 10, reszta w EDX, iloraz w EAX
 		add dl, 30H ; zamiana reszty z dzielenia na kod ASCII
 		mov obszar [esi], dl; zapisanie cyfry w kodzie ASCII
 		dec esi ; zmniejszenie indeksu
-		dec bh
 		cmp eax, 0 ; sprawdzenie czy iloraz = 0
 		jne konwersja ; skok, gdy iloraz niezerowy
 
-		cmp bh, 0
-		je skip
-
-	dodaj_zera:
-		cmp bl, 1
-		je skip
-		mov byte PTR obszar [esi], 30H ; wpisanie zera
-		dec esi ; zmniejszenie indeksu
-		dec bh
-		jnz dodaj_zera
-
-	skip:
 		pop eax
-		mov bh, 10
-		dec bl
+		dec edi
 		jnz konwersja
 		
 		 ; wypełnienie pozostałych bajtów spacjami i wpisanie znaków nowego wiersza
@@ -120,9 +105,9 @@ public _main
 	wczytaj_96bit ENDP
 
 	_main PROC
-		mov ecx, 555
-		mov edx, 0FFFFFFFFh
-		mov eax, 444
+		mov ecx, 0FFFFFFFFh ; ustawienie ECX na 0xFFFFFFFF
+		mov edx, 0FFFFFFFFh ; ustawienie EDX na 0xFFFFFFFF
+		mov eax, 0FFFFFF00h ; ustawienie EAX na 0xFFFFFFFE
 		call wyswietl_96bit
 
 		;call wczytaj_96bit
