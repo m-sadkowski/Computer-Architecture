@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/14/24 21:42:53
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/14/24 21:51:38
 code.asm						     Page 1 - 1
 
 
@@ -123,7 +123,6 @@ code.asm						     Page 1 - 1
  000000C0  EB E8				jmp pobieraj_znaki ; skok na początek pętli
 
  000000C2				byl_enter:
-
  000000C2  5D					pop ebp
  000000C3  5F					pop edi
  000000C4  5E					pop esi
@@ -137,14 +136,12 @@ code.asm						     Page 1 - 1
  000000D1  B8 000001BC				mov eax, 444
  000000D6  E8 FFFFFF25				call wyswietl_96bit
 
-						;call wczytaj_96bit
-
  000000DB  6A 00				push 0
  000000DD  E8 00000000 E			call _ExitProcess@4
  000000E2				_main ENDP
 
 				END
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/14/24 21:42:53
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/14/24 21:51:38
 code.asm						     Symbols 2 - 1
 
 
