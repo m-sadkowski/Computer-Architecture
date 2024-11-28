@@ -81,7 +81,6 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalOptions>libcmt.lib %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <MASM>
       <AdditionalOptions>-Fl %(AdditionalOptions)</AdditionalOptions>
@@ -134,6 +133,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <MASM Include="code.asm" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
