@@ -1,65 +1,81 @@
-public szukaj64_max
-public suma_siedmiu_liczb
+.686
+.model flat
+public _kwadrat
 
 .code
-	szukaj64_max PROC
-		push rbx; przechowanie rejestrów
-		push rsi 
 
-		mov rbx, rcx; adres tablicy
-		mov rcx, rdx; liczba elementów tablicy
-		mov rsi, 0; indeks bie¿¹cy w tablicy
-		; w rejestrze RAX przechowywany bêdzie najwiêkszy dotychczas
-		; znaleziony element tablicy - na razie przyjmujemy, ¿e jest
-		; to pierwszy element tablicy
-		mov rax, [rbx + rsi * 8]
-		; zmniejszenie o 1 liczby obiegów pêtli, bo iloœæ porównañ
-		; jest mniejsza o 1 od iloœci elementów tablicy
-		dec rcx
+_kwadrat PROC
+		push ebp ; zapisanie rejestru ebp
+		mov ebp, esp ; przypisanie ebp do esp
+		push ebx ; zapisanie rejestru ebx
 
-	ptl: 
-		inc rsi; inkrementacja indeksu
-		; porównanie najwiêkszego, dotychczas znalezionego elementu
-		; tablicy z elementem bie¿¹cym
-		cmp rax, [rbx + rsi * 8]
-		jge dalej; skok, gdy element bie¿¹cy jest
-		; niewiêkszy od dotychczas znalezionego
-		; przypadek, gdy element bie¿¹cy jest wiêkszy
-		; od dotychczas znalezionego
-		mov rax, [rbx + rsi * 8]
+		mov eax, [ebp+8] ; pobranie mlodszej czesci liczby
+		mov edx, [ebp+12] ; pobranie starszej czesci liczby
+		cmp eax, 0
+		jne dalej_1
 
-	dalej: 
-		loop ptl; organizacja pêtli
-		; obliczona wartoœæ maksymalna pozostaje w rejestrze RAX
-		; i bêdzie wykorzystana przez kod programu napisany w jêzyku C
+	sprawdz_1:
+		cmp edx, 0
+		je zwroc_0
 
-		pop rsi
-		pop rbx
+	dalej_1:
+		cmp eax, 1
+		jne dalej_2
+
+	sprawdz_2:
+		cmp edx, 0
+		je zwroc_1
+
+	dalej_2:
+		clc
+		rcl eax, 1
+		rcl edx, 1
+		clc
+		rcl eax, 1
+		rcl edx, 1
+
+		sub eax, 4
+		jnc dalej_3
+		sub edx, 1
+
+	dalej_3:
+		push edx
+		push eax
+
+	zwroc_cos:
+		mov eax, [ebp+8]
+		mov edx, [ebp+12]
+		sub eax, 2
+		jnc dalej_5
+		sub edx, 1
+
+	dalej_5:
+		push edx
+		push eax
+		call _kwadrat
+		add esp, 8
+		pop ecx
+		add eax, ecx
+		jnc dalej_4
+		add edx, 1
+
+	dalej_4:
+		pop ecx
+		add edx, ecx 
+		jmp koniec
+
+	zwroc_1:
+		mov eax, 1
+		jmp koniec
+
+	zwroc_0:
+		mov eax, 0
+		jmp koniec
+
+	koniec:
+		pop ebx
+		pop ebp
 		ret
-	szukaj64_max ENDP
+	_kwadrat ENDP
 
-	suma_siedmiu_liczb PROC
-		push rbp ; zapamiêtanie rejestru rbp
-		mov rbp, rsp ; rbp = rsp
-		push rbx ; zapamiêtanie rejestru rbx
-
-		mov rax, 0
-		add rax, rcx
-		add rax, rdx
-		add rax, r8
-		add rax, r9
-		; 8 bajtow - dopelnienie do wielokrotnosci 16
-		; 24 bajty - trzy parametry przekazywane
-		; 32 bajty - shadow space
-		mov rbx, [rbp+48]
-		add rax, rbx
-		mov rbx, [rbp+56]
-		add rax, rbx
-		mov rbx, [rbp+64]
-		add rax, rbx
-
-		pop rbx ; przywrocenie rejestru rbx
-		pop rbp ; przywrocenie rejestru rbp
-		ret
-	suma_siedmiu_liczb ENDP
 END
