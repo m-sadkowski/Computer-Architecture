@@ -1,89 +1,78 @@
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/28/24 17:52:34
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/28/24 18:45:22
 code.asm						     Page 1 - 1
 
 
 				.686
 				.model flat
-				public _kwadrat
+				public _convert_to_string
+				extern _malloc : PROC
 
  00000000			.code
+ 00000000				_convert_to_string PROC
+ 00000000  55					push ebp
+ 00000001  8B EC				mov ebp, esp
+ 00000003  56					push esi
+ 00000004  57					push edi
 
- 00000000			_kwadrat PROC
- 00000000  55					push ebp ; zapisanie rejestru ebp
- 00000001  8B EC				mov ebp, esp ; przypisanie ebp do esp
- 00000003  53					push ebx ; zapisanie rejestru ebx
+						; Pobranie argumentów (64-bitowe liczby)
 
- 00000004  8B 45 08				mov eax, [ebp+8] ; pobranie mlodszej czesci liczby
- 00000007  8B 55 0C				mov edx, [ebp+12] ; pobranie starszej czesci liczby
- 0000000A  83 F8 00				cmp eax, 0
- 0000000D  75 05				jne dalej_1
+ 00000005  8B 5D 08				mov ebx, [ebp+8]  ; adres a
+ 00000008  8B 43 04				mov eax, [ebx + 4] ; starsza czesc a
+ 0000000B  8B 1B				mov ebx, [ebx] ; mlodsza czesc a
+ 0000000D  8B 4D 0C				mov ecx, [ebp+12] ; starsza czesc b
+ 00000010  8B 55 10				mov edx, [ebp+16] ; mlodsza czesc b
 
- 0000000F				sprawdz_1:
- 0000000F  83 FA 00				cmp edx, 0
- 00000012  74 4A				je zwroc_0
+						; Alokujemy pamiêæ na wynikowy string (2 liczby po 64 bity w binarnym UTF-16)
+						; 64 bity to 64 znaki '0' lub '1', ka¿dy UTF-16 to 2 bajty + 1 bajt na null
+ 00000013  B9 00000104				mov ecx, 260       ; 2 * 64 * 2 + 2 (wliczaj¹c \0)
+ 00000018  51					push ecx
+ 00000019  E8 00000000 E			call _malloc       ; Alokujemy pamiêæ
+ 0000001E  83 C4 04				add esp, 4
+ 00000021  8B F8				mov edi, eax       ; WskaŸnik na zaalokowany bufor (wynikowy string)
 
- 00000014				dalej_1:
- 00000014  83 F8 01				cmp eax, 1
- 00000017  75 05				jne dalej_2
+						; Przekszta³camy pierwsz¹ liczbê na binarny ci¹g znaków UTF-16
+ 00000023  8B F0				mov esi, eax     ; WskaŸnik na pierwszy element tablicy (bufor wynikowy)
+ 00000025  50					push eax           ; Zachowujemy wskaŸnik na bufor
 
- 00000019				sprawdz_2:
- 00000019  83 FA 00				cmp edx, 0
- 0000001C  74 39				je zwroc_1
+ 00000026  B9 00000040				mov ecx, 64        ; 64 bity
+ 0000002B  8B 45 08				mov eax, [ebp+8]   ; Pobierz wartoœæ liczby
+ 0000002E				bin_loop1:
+ 0000002E  D1 E0				shl eax, 1         ; Przesuwamy bit w lewo
+ 00000030  72 07				jc set_one1        ; Jeœli przeniesienie, to ustaw '1'
+ 00000032  66| C7 06 0030			mov word ptr [esi], '0'
+ 00000037  EB 05				jmp next1
+ 00000039				set_one1:
+ 00000039  66| C7 06 0031			mov word ptr [esi], '1'
+ 0000003E				next1:
+ 0000003E  83 C6 02				add esi, 2         ; Przesuwamy wskaŸnik (UTF-16 = 2 bajty)
+ 00000041  E2 EB				loop bin_loop1
 
- 0000001E				dalej_2:
- 0000001E  F8					clc
- 0000001F  D1 D0				rcl eax, 1
- 00000021  D1 D2				rcl edx, 1
- 00000023  F8					clc
- 00000024  D1 D0				rcl eax, 1
- 00000026  D1 D2				rcl edx, 1
+						; Przekszta³camy drug¹ liczbê na binarny ci¹g znaków UTF-16
+ 00000043  B9 00000040				mov ecx, 64        ; 64 bity
+ 00000048  8B 45 0C				mov eax, [ebp+12]  ; Pobierz wartoœæ liczby
+ 0000004B				bin_loop2:
+ 0000004B  D1 E0				shl eax, 1         ; Przesuwamy bit w lewo
+ 0000004D  72 07				jc set_one2        ; Jeœli przeniesienie, to ustaw '1'
+ 0000004F  66| C7 06 0030			mov word ptr [esi], '0'
+ 00000054  EB 05				jmp next2
+ 00000056				set_one2:
+ 00000056  66| C7 06 0031			mov word ptr [esi], '1'
+ 0000005B				next2:
+ 0000005B  83 C6 02				add esi, 2         ; Przesuwamy wskaŸnik (UTF-16 = 2 bajty)
+ 0000005E  E2 EB				loop bin_loop2
 
- 00000028  83 E8 04				sub eax, 4
- 0000002B  73 03				jnc dalej_3
- 0000002D  83 EA 01				sub edx, 1
+						; Dodaj null-terminator (UTF-16 = 2 bajty nulli)
+ 00000060  66| C7 06 0000			mov word ptr [esi], 0
 
- 00000030				dalej_3:
- 00000030  52					push edx
- 00000031  50					push eax
+ 00000065  58					pop eax            ; Przywracamy wskaŸnik na bufor do EAX (wartoœæ zwracana)
 
- 00000032				zwroc_cos:
- 00000032  8B 45 08				mov eax, [ebp+8]
- 00000035  8B 55 0C				mov edx, [ebp+12]
- 00000038  83 E8 02				sub eax, 2
- 0000003B  73 03				jnc dalej_5
- 0000003D  83 EA 01				sub edx, 1
-
- 00000040				dalej_5:
- 00000040  52					push edx
- 00000041  50					push eax
- 00000042  E8 FFFFFFB9				call _kwadrat
- 00000047  83 C4 08				add esp, 8
- 0000004A  59					pop ecx
- 0000004B  03 C1				add eax, ecx
- 0000004D  73 03				jnc dalej_4
- 0000004F  83 C2 01				add edx, 1
-
- 00000052				dalej_4:
- 00000052  59					pop ecx
- 00000053  03 D1				add edx, ecx 
- 00000055  EB 0E				jmp koniec
-
- 00000057				zwroc_1:
- 00000057  B8 00000001				mov eax, 1
- 0000005C  EB 07				jmp koniec
-
- 0000005E				zwroc_0:
- 0000005E  B8 00000000				mov eax, 0
- 00000063  EB 00				jmp koniec
-
- 00000065				koniec:
- 00000065  5B					pop ebx
- 00000066  5D					pop ebp
- 00000067  C3					ret
- 00000068				_kwadrat ENDP
-
+ 00000066  5F					pop edi
+ 00000067  5E					pop esi
+ 00000068  5D					pop ebp
+ 00000069  C3					ret
+ 0000006A				_convert_to_string ENDP
 				END
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/28/24 17:52:34
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/28/24 18:45:22
 code.asm						     Symbols 2 - 1
 
 
@@ -95,25 +84,20 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 _DATA  . . . . . . . . . . . . .	32 Bit	 00000000 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 00000068 Para	  Public  'CODE'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000006A Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
 
                 N a m e                 Type     Value    Attr
 
-_kwadrat . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000068 Public
-  sprawdz_1  . . . . . . . . . .	L Near	 0000000F _TEXT	
-  dalej_1  . . . . . . . . . . .	L Near	 00000014 _TEXT	
-  sprawdz_2  . . . . . . . . . .	L Near	 00000019 _TEXT	
-  dalej_2  . . . . . . . . . . .	L Near	 0000001E _TEXT	
-  dalej_3  . . . . . . . . . . .	L Near	 00000030 _TEXT	
-  zwroc_cos  . . . . . . . . . .	L Near	 00000032 _TEXT	
-  dalej_5  . . . . . . . . . . .	L Near	 00000040 _TEXT	
-  dalej_4  . . . . . . . . . . .	L Near	 00000052 _TEXT	
-  zwroc_1  . . . . . . . . . . .	L Near	 00000057 _TEXT	
-  zwroc_0  . . . . . . . . . . .	L Near	 0000005E _TEXT	
-  koniec . . . . . . . . . . . .	L Near	 00000065 _TEXT	
+_convert_to_string . . . . . . .	P Near	 00000000 _TEXT	Length= 0000006A Public
+  bin_loop1  . . . . . . . . . .	L Near	 0000002E _TEXT	
+  set_one1 . . . . . . . . . . .	L Near	 00000039 _TEXT	
+  next1  . . . . . . . . . . . .	L Near	 0000003E _TEXT	
+  bin_loop2  . . . . . . . . . .	L Near	 0000004B _TEXT	
+  set_one2 . . . . . . . . . . .	L Near	 00000056 _TEXT	
+  next2  . . . . . . . . . . . .	L Near	 0000005B _TEXT	
 
 
 Symbols:
@@ -129,6 +113,7 @@ Symbols:
 @fardata?  . . . . . . . . . . .	Text   	 FLAT
 @fardata . . . . . . . . . . . .	Text   	 FLAT
 @stack . . . . . . . . . . . . .	Text   	 FLAT
+_malloc  . . . . . . . . . . . .	L Near	 00000000 FLAT	External
 
 	   0 Warnings
 	   0 Errors
