@@ -1,78 +1,76 @@
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/28/24 18:45:22
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/29/24 00:24:38
 code.asm						     Page 1 - 1
 
 
 				.686
 				.model flat
-				public _convert_to_string
+				public _roznica
 				extern _malloc : PROC
 
  00000000			.code
- 00000000				_convert_to_string PROC
+ 00000000				_roznica PROC
  00000000  55					push ebp
  00000001  8B EC				mov ebp, esp
- 00000003  56					push esi
- 00000004  57					push edi
 
-						; Pobranie argumentów (64-bitowe liczby)
+ 00000003  52					push edx
+ 00000004  56					push esi
+ 00000005  57					push edi
 
- 00000005  8B 5D 08				mov ebx, [ebp+8]  ; adres a
- 00000008  8B 43 04				mov eax, [ebx + 4] ; starsza czesc a
- 0000000B  8B 1B				mov ebx, [ebx] ; mlodsza czesc a
- 0000000D  8B 4D 0C				mov ecx, [ebp+12] ; starsza czesc b
- 00000010  8B 55 10				mov edx, [ebp+16] ; mlodsza czesc b
+ 00000006  8B 55 08				mov edx, [ebp + 8] ; adres a w edx
+ 00000009  8B 5D 0C				mov ebx, [ebp + 12] ; adres b w ebx
+ 0000000C  8B 4D 10				mov ecx, [ebp + 16] ; rozmiar tablic
 
-						; Alokujemy pamiêæ na wynikowy string (2 liczby po 64 bity w binarnym UTF-16)
-						; 64 bity to 64 znaki '0' lub '1', ka¿dy UTF-16 to 2 bajty + 1 bajt na null
- 00000013  B9 00000104				mov ecx, 260       ; 2 * 64 * 2 + 2 (wliczaj¹c \0)
- 00000018  51					push ecx
+ 0000000F  8B C1				mov eax, ecx ; d³ugoœæ long long int w bajtach
+ 00000011  BE 00000008				mov esi, 8
+ 00000016  F7 E6				mul esi ; d³ugoœæ tablicy w bajtach (rozmiar * 8)
+ 00000018  50					push eax
  00000019  E8 00000000 E			call _malloc       ; Alokujemy pamiêæ
  0000001E  83 C4 04				add esp, 4
- 00000021  8B F8				mov edi, eax       ; WskaŸnik na zaalokowany bufor (wynikowy string)
 
-						; Przekszta³camy pierwsz¹ liczbê na binarny ci¹g znaków UTF-16
- 00000023  8B F0				mov esi, eax     ; WskaŸnik na pierwszy element tablicy (bufor wynikowy)
- 00000025  50					push eax           ; Zachowujemy wskaŸnik na bufor
+ 00000021  8B F8				mov edi, eax ; adres nowej tablicy
+ 00000023  33 F6				xor esi, esi ; indeks = 0
+ 00000025  8B 55 08				mov edx, [ebp + 8] ; adres a w edx - po raz drugi, bo w poprzedniej operacji zosta³ nadpisany (malloc)
+ 00000028  8B 5D 0C				mov ebx, [ebp + 12] ; adres b w ebx
+ 0000002B  8B 4D 10				mov ecx, [ebp + 16] ; rozmiar tablic
 
- 00000026  B9 00000040				mov ecx, 64        ; 64 bity
- 0000002B  8B 45 08				mov eax, [ebp+8]   ; Pobierz wartoœæ liczby
- 0000002E				bin_loop1:
- 0000002E  D1 E0				shl eax, 1         ; Przesuwamy bit w lewo
- 00000030  72 07				jc set_one1        ; Jeœli przeniesienie, to ustaw '1'
- 00000032  66| C7 06 0030			mov word ptr [esi], '0'
- 00000037  EB 05				jmp next1
- 00000039				set_one1:
- 00000039  66| C7 06 0031			mov word ptr [esi], '1'
- 0000003E				next1:
- 0000003E  83 C6 02				add esi, 2         ; Przesuwamy wskaŸnik (UTF-16 = 2 bajty)
- 00000041  E2 EB				loop bin_loop1
+ 0000002E				petla:
+						; Starsza czêœæ
+ 0000002E  8B 04 F2				mov eax, [edx + esi * 8] ; eax = a[i]
+ 00000031  52					push edx
+ 00000032  8B 14 F3				mov edx, [ebx + esi * 8] ; edx = b[i]
+ 00000035  2B C2				sub eax, edx ; eax = a[i] - b[i]
+ 00000037  5A					pop edx 
+ 00000038  57					push edi
+ 00000039  8D 3C F7				lea edi, [edi + esi * 8] ; edi = &c[i]
+ 0000003C  89 07				mov [edi], eax ; c[i] = a[i] - b[i]
+ 0000003E  5F					pop edi 
 
-						; Przekszta³camy drug¹ liczbê na binarny ci¹g znaków UTF-16
- 00000043  B9 00000040				mov ecx, 64        ; 64 bity
- 00000048  8B 45 0C				mov eax, [ebp+12]  ; Pobierz wartoœæ liczby
- 0000004B				bin_loop2:
- 0000004B  D1 E0				shl eax, 1         ; Przesuwamy bit w lewo
- 0000004D  72 07				jc set_one2        ; Jeœli przeniesienie, to ustaw '1'
- 0000004F  66| C7 06 0030			mov word ptr [esi], '0'
- 00000054  EB 05				jmp next2
- 00000056				set_one2:
- 00000056  66| C7 06 0031			mov word ptr [esi], '1'
- 0000005B				next2:
- 0000005B  83 C6 02				add esi, 2         ; Przesuwamy wskaŸnik (UTF-16 = 2 bajty)
- 0000005E  E2 EB				loop bin_loop2
+						; M³odsza czêœæ 
+ 0000003F  8B 44 F2 04				mov eax, [edx + esi * 8 + 4] ; eax = a[i]
+ 00000043  52					push edx
+ 00000044  8B 54 F3 04				mov edx, [ebx + esi * 8 + 4] ; edx = b[i]
+ 00000048  1B C2				sbb eax, edx ; sbb - sub with borrow (odejmowanie z przeniesieniem), jeœli poprzednia operacja odejmowania wykona³a siê z przeniesieniem, to odejmujemy 1
+ 0000004A  5A					pop edx
+ 0000004B  57					push edi
+ 0000004C  8D 7C F7 04				lea edi, [edi + esi * 8 + 4] ; edi = &c[i]
+ 00000050  89 07				mov [edi], eax ; c[i] = a[i] - b[i]
+ 00000052  5F					pop edi
 
-						; Dodaj null-terminator (UTF-16 = 2 bajty nulli)
- 00000060  66| C7 06 0000			mov word ptr [esi], 0
+						; Zwiêkszamy licznik i pêtla
+ 00000053  46					inc esi
+ 00000054  E2 D8				loop petla
 
- 00000065  58					pop eax            ; Przywracamy wskaŸnik na bufor do EAX (wartoœæ zwracana)
+						; Zwracamy adres nowej tablicy
+ 00000056  8B C7				mov eax, edi
 
- 00000066  5F					pop edi
- 00000067  5E					pop esi
- 00000068  5D					pop ebp
- 00000069  C3					ret
- 0000006A				_convert_to_string ENDP
+ 00000058  5A					pop edx
+ 00000059  5F					pop edi
+ 0000005A  5E					pop esi
+ 0000005B  5D					pop ebp
+ 0000005C  C3					ret
+ 0000005D				_roznica ENDP
 				END
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/28/24 18:45:22
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/29/24 00:24:38
 code.asm						     Symbols 2 - 1
 
 
@@ -84,20 +82,15 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 _DATA  . . . . . . . . . . . . .	32 Bit	 00000000 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 0000006A Para	  Public  'CODE'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000005D Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
 
                 N a m e                 Type     Value    Attr
 
-_convert_to_string . . . . . . .	P Near	 00000000 _TEXT	Length= 0000006A Public
-  bin_loop1  . . . . . . . . . .	L Near	 0000002E _TEXT	
-  set_one1 . . . . . . . . . . .	L Near	 00000039 _TEXT	
-  next1  . . . . . . . . . . . .	L Near	 0000003E _TEXT	
-  bin_loop2  . . . . . . . . . .	L Near	 0000004B _TEXT	
-  set_one2 . . . . . . . . . . .	L Near	 00000056 _TEXT	
-  next2  . . . . . . . . . . . .	L Near	 0000005B _TEXT	
+_roznica . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000005D Public
+  petla  . . . . . . . . . . . .	L Near	 0000002E _TEXT	
 
 
 Symbols:
