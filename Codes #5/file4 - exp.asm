@@ -37,11 +37,12 @@ public _nowy_exp
 		jnz potega
 		; ST(0) = x^i, ST(1) = i * poprzednie i, ST(2) = suma
 
-		fdiv ST(0), ST(2)
+		fdivr ST(0), ST(2)
 		; ST(0) = x^i / (i * poprzednie i), ST(1) = i * poprzednie i, ST(2) = suma
 
 		fadd ST(0), ST(2) 
 		; ST(0) = suma + x^i / (i * poprzednie i), ST(1) = i * poprzednie i, ST(2) = suma
+
 
 		inc ecx
 		cmp ecx, 19

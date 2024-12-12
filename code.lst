@@ -1,76 +1,61 @@
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/29/24 00:24:38
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    12/12/24 20:45:27
 code.asm						     Page 1 - 1
 
 
 				.686
 				.model flat
-				public _roznica
-				extern _malloc : PROC
+				public _nowy_exp
+
+ 00000000			.data
 
  00000000			.code
- 00000000				_roznica PROC
- 00000000  55					push ebp
- 00000001  8B EC				mov ebp, esp
+ 00000000				_nowy_exp PROC
+ 00000000  55					push ebp ; zapisanie zawartoœci EBP na stosie
+ 00000001  8B EC				mov ebp, esp ; kopiowanie zawartoœci ESP do EBP
 
- 00000003  52					push edx
- 00000004  56					push esi
- 00000005  57					push edi
+ 00000003  9B DB E3				finit ; inicjalizacja koprocesora
 
- 00000006  8B 55 08				mov edx, [ebp + 8] ; adres a w edx
- 00000009  8B 5D 0C				mov ebx, [ebp + 12] ; adres b w ebx
- 0000000C  8B 4D 10				mov ecx, [ebp + 16] ; rozmiar tablic
+ 00000006  B9 00000001				mov ecx, 1 ; i = 1
 
- 0000000F  8B C1				mov eax, ecx ; d³ugoœæ long long int w bajtach
- 00000011  BE 00000008				mov esi, 8
- 00000016  F7 E6				mul esi ; d³ugoœæ tablicy w bajtach (rozmiar * 8)
- 00000018  50					push eax
- 00000019  E8 00000000 E			call _malloc       ; Alokujemy pamiêæ
- 0000001E  83 C4 04				add esp, 4
+ 0000000B  D9 E8				fld1 ; ST(0) = 1 ; suma
+ 0000000D  D9 E8				fld1 ; ST(1) = 1 ; pierwotne i
 
- 00000021  8B F8				mov edi, eax ; adres nowej tablicy
- 00000023  33 F6				xor esi, esi ; indeks = 0
- 00000025  8B 55 08				mov edx, [ebp + 8] ; adres a w edx - po raz drugi, bo w poprzedniej operacji zosta³ nadpisany (malloc)
- 00000028  8B 5D 0C				mov ebx, [ebp + 12] ; adres b w ebx
- 0000002B  8B 4D 10				mov ecx, [ebp + 16] ; rozmiar tablic
+ 0000000F				petla: 
+ 0000000F  51					push ecx
+ 00000010  DB 04 24				fild dword PTR [esp]
+ 00000013  59					pop ecx
+						; ST(0) = i, ST(1) = suma, ST(2) = poprzednie i
 
- 0000002E				petla:
-						; Starsza czêœæ
- 0000002E  8B 04 F2				mov eax, [edx + esi * 8] ; eax = a[i]
- 00000031  52					push edx
- 00000032  8B 14 F3				mov edx, [ebx + esi * 8] ; edx = b[i]
- 00000035  2B C2				sub eax, edx ; eax = a[i] - b[i]
- 00000037  5A					pop edx 
- 00000038  57					push edi
- 00000039  8D 3C F7				lea edi, [edi + esi * 8] ; edi = &c[i]
- 0000003C  89 07				mov [edi], eax ; c[i] = a[i] - b[i]
- 0000003E  5F					pop edi 
+ 00000014  D8 CA				fmul ST(0), ST(2) 
+ 00000016  DD DA				fstp ST(2)
+						; ST(0) = i * poprzednie i, ST(1) = suma
 
-						; M³odsza czêœæ 
- 0000003F  8B 44 F2 04				mov eax, [edx + esi * 8 + 4] ; eax = a[i]
- 00000043  52					push edx
- 00000044  8B 54 F3 04				mov edx, [ebx + esi * 8 + 4] ; edx = b[i]
- 00000048  1B C2				sbb eax, edx ; sbb - sub with borrow (odejmowanie z przeniesieniem), jeœli poprzednia operacja odejmowania wykona³a siê z przeniesieniem, to odejmujemy 1
- 0000004A  5A					pop edx
- 0000004B  57					push edi
- 0000004C  8D 7C F7 04				lea edi, [edi + esi * 8 + 4] ; edi = &c[i]
- 00000050  89 07				mov [edi], eax ; c[i] = a[i] - b[i]
- 00000052  5F					pop edi
+ 00000018  D9 45 08				fld dword PTR [ebp + 8] 
+						; ST(0) = x, ST(1) = i * poprzednie i, ST(2) = suma
 
-						; Zwiêkszamy licznik i pêtla
- 00000053  46					inc esi
- 00000054  E2 D8				loop petla
+ 0000001B  8B D1				mov edx, ecx
+ 0000001D				potega:
+ 0000001D  D9 45 08				fld dword ptr [ebp + 8] 
+ 00000020  DE C9		        fmulp st(1), st(0)
+ 00000022  4A					dec edx
+ 00000023  75 F8				jnz potega
+						; ST(0) = x^i, ST(1) = i * poprzednie i, ST(2) = suma
 
-						; Zwracamy adres nowej tablicy
- 00000056  8B C7				mov eax, edi
+ 00000025  D8 F2				fdiv ST(0), ST(2)
+						; ST(0) = x^i / (i * poprzednie i), ST(1) = i * poprzednie i, ST(2) = suma
 
- 00000058  5A					pop edx
- 00000059  5F					pop edi
- 0000005A  5E					pop esi
- 0000005B  5D					pop ebp
- 0000005C  C3					ret
- 0000005D				_roznica ENDP
+ 00000027  D8 C2				fadd ST(0), ST(2) 
+						; ST(0) = suma + x^i / (i * poprzednie i), ST(1) = i * poprzednie i, ST(2) = suma
+
+ 00000029  41					inc ecx
+ 0000002A  83 F9 13				cmp ecx, 19
+ 0000002D  75 E0				jne petla
+
+ 0000002F  5D					pop ebp
+ 00000030  C3					ret
+ 00000031				_nowy_exp ENDP
 				END
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    11/29/24 00:24:38
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    12/12/24 20:45:27
 code.asm						     Symbols 2 - 1
 
 
@@ -82,15 +67,16 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 _DATA  . . . . . . . . . . . . .	32 Bit	 00000000 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 0000005D Para	  Public  'CODE'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 00000031 Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
 
                 N a m e                 Type     Value    Attr
 
-_roznica . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000005D Public
-  petla  . . . . . . . . . . . .	L Near	 0000002E _TEXT	
+_nowy_exp  . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000031 Public
+  petla  . . . . . . . . . . . .	L Near	 0000000F _TEXT	
+  potega . . . . . . . . . . . .	L Near	 0000001D _TEXT	
 
 
 Symbols:
@@ -106,7 +92,6 @@ Symbols:
 @fardata?  . . . . . . . . . . .	Text   	 FLAT
 @fardata . . . . . . . . . . . .	Text   	 FLAT
 @stack . . . . . . . . . . . . .	Text   	 FLAT
-_malloc  . . . . . . . . . . . .	L Near	 00000000 FLAT	External
 
 	   0 Warnings
 	   0 Errors
