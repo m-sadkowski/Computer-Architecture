@@ -1,0 +1,8 @@
+mount c c:\asm
+c:
+masm code.asm,,,;
+link code.obj;
+code
+
+(zakończenie = X)
+(ctrl + f4 = odświeżenie zawartości katalogu)
