@@ -1,122 +1,30 @@
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    01/03/25 20:13:01
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    01/07/25 19:28:51
 code.asm						     Page 1 - 1
 
 
-				; Program gwiazdki.asm
-				; Wyœwietlanie znaków * w takt przerwañ zegarowych
-				; Uruchomienie w trybie rzeczywistym procesora x86
-				; lub na maszynie wirtualnej
-				; zakoñczenie programu po naciœniêciu klawisza 'x'
-				; asemblacja (MASM 4.0): masm gwiazdki.asm,,,;
-				; konsolidacja (LINK 3.60): link gwiazdki.obj;
+				.686
+				.model flat
+				public _pole_kola
 
-				.386
- 0000				rozkazy SEGMENT use16
-				ASSUME CS:rozkazy
+ 00000000			.code
+ 00000000				_pole_kola PROC
+ 00000000  55					push ebp
+ 00000001  8B EC				mov ebp, esp
 
-				;============================================================
-				; procedura obs³ugi przerwania zegarowego
- 0000					obsluga_zegara PROC
-						; przechowanie u¿ywanych rejestrów
- 0000  50					push ax
- 0001  53					push bx
- 0002  06					push es
-						; wpisanie adresu pamiêci ekranu do rejestru ES - pamiêæ
-						; ekranu dla trybu tekstowego zaczyna siê od adresu B8000H,
-						; jednak do rejestru ES wpisujemy wartoœæ B800H,
-						; bo w trakcie obliczenia adresu procesor ka¿dorazowo mno¿y
-						; zawartoœæ rejestru ES przez 16
- 0003  B8 B800					mov ax, 0B800h ;adres pamiêci ekranu
- 0006  8E C0					mov es, ax
-						; zmienna 'licznik' zawiera adres bie¿¹cy w pamiêci ekranu
- 0008  2E: 8B 1E 002F R				mov bx, cs:licznik
-						; przes³anie do pamiêci ekranu kodu ASCII wyœwietlanego znaku
-						; i kodu koloru: bia³y na czarnym tle (do nastêpnego bajtu)
- 000D  26: C6 07 2A				mov byte PTR es:[bx], '*' ; kod ASCII
- 0011  26: C6 47 01 07				mov byte PTR es:[bx+1], 00000111B ; kolor
-						; zwiêkszenie o 2 adresu bie¿¹cego w pamiêci ekranu
- 0016  83 C3 02					add bx,2
-						; sprawdzenie czy adres bie¿¹cy osi¹gn¹³ koniec pamiêci ekranu
- 0019  81 FB 0FA0				cmp bx,4000
- 001D  72 03					jb wysw_dalej ; skok gdy nie koniec ekranu
-						; wyzerowanie adresu bie¿¹cego, gdy ca³y ekran zapisany
- 001F  BB 0000					mov bx, 0
-						;zapisanie adresu bie¿¹cego do zmiennej 'licznik'
- 0022					wysw_dalej:
- 0022  2E: 89 1E 002F R				mov cs:licznik,bx
-						; odtworzenie rejestrów
- 0027  07					pop es
- 0028  5B					pop bx
- 0029  58					pop ax
-						; skok do oryginalnej procedury obs³ugi przerwania zegarowego
- 002A  2E: FF 2E 0031 R				jmp dword PTR cs:wektor8
-						; dane programu ze wzglêdu na specyfikê obs³ugi przerwañ
-						; umieszczone s¹ w segmencie kodu
- 002F 0140					licznik dw 320 ; wyœwietlanie pocz¹wszy od 2. wiersza
- 0031 00000000					wektor8 dd ?
- 0035					obsluga_zegara ENDP
+ 00000003  8B 45 08				mov eax, [ebp + 8] ; adres pod którym jest promieñ
+ 00000006  9B DB E3				finit ; inicjalizacja koprocesora arytmetycznego
+ 00000009  D9 00				fld dword ptr [eax] ; za³adowanie promienia na stos ST(0) = r)
+ 0000000B  D9 00				fld dword ptr [eax] ; za³adowanie promienia na stos ST(0) = r, ST(1) = r
+ 0000000D  DE C9				fmulp ; ST(0) = r^2
+ 0000000F  D9 EB				fldpi ; za³adowanie liczby pi na stos ST(0) = pi, ST(1) = r^2
+ 00000011  DE C9				fmulp ; ST(0) = pi*r^2
+ 00000013  D9 18				fstp dword ptr [eax]
 
-				;============================================================
-				; program g³ówny - instalacja i deinstalacja procedury
-				; obs³ugi przerwañ
-				; ustalenie strony nr 0 dla trybu tekstowego
- 0035					zacznij:
- 0035  B0 00					mov al, 0
- 0037  B4 05					mov ah, 5
- 0039  CD 0A					int 10
- 003B  B8 0000					mov ax, 0
- 003E  8E D8					mov ds,ax ; zerowanie rejestru DS
-						; odczytanie zawartoœci wektora nr 8 i zapisanie go
-						; w zmiennej 'wektor8' (wektor nr 8 zajmuje w pamiêci 4 bajty
-						; pocz¹wszy od adresu fizycznego 8 * 4 = 32)
- 0040  67& 66| A1				mov eax,ds:[32] ; adres fizyczny 0*16 + 32 = 32
-       00000020
- 0047  66| 2E: A3 0031 R			mov cs:wektor8, eax
-
-						; wpisanie do wektora nr 8 adresu procedury 'obsluga_zegara'
- 004C  B8 ---- R				mov ax, SEG obsluga_zegara ; czêœæ segmentowa adresu
- 004F  BB 0000 R				mov bx, OFFSET obsluga_zegara ; offset adresu
- 0052  FA					cli ; zablokowanie przerwañ
-						; zapisanie adresu procedury do wektora nr 8
- 0053  67& 89 1D 00000020			mov ds:[32], bx ; OFFSET
- 005A  67& A3 00000022				mov ds:[34], ax ; cz. segmentowa
- 0060  FB					sti ;odblokowanie przerwañ
-						; oczekiwanie na naciœniêcie klawisza 'x'
- 0061					aktywne_oczekiwanie:
- 0061  B4 01					mov ah,1
- 0063  CD 16					int 16H
-						; funkcja INT 16H (AH=1) BIOSu ustawia ZF=1 jeœli
-						; naciœniêto jakiœ klawisz
- 0065  74 FA					jz aktywne_oczekiwanie
-						; odczytanie kodu ASCII naciœniêtego klawisza (INT 16H, AH=0)
-						; do rejestru AL
- 0067  B4 00					mov ah, 0
- 0069  CD 16					int 16H
- 006B  3C 78					cmp al, 'x' ; porównanie z kodem litery 'x'
- 006D  75 F2					jne aktywne_oczekiwanie ; skok, gdy inny znak
-						; deinstalacja procedury obs³ugi przerwania zegarowego
-						; odtworzenie oryginalnej zawartoœci wektora nr 8
- 006F  66| 2E: A1 0031 R			mov eax, cs:wektor8
- 0074  FA					cli
- 0075  67& 66| A3				mov ds:[32], eax ; przes³anie wartoœci oryginalnej
-       00000020
-						; do wektora 8 w tablicy wektorów
-						; przerwañ
- 007C  FB					sti
-						; zakoñczenie programu
- 007D  B0 00					mov al, 0
- 007F  B4 4C					mov ah, 4CH
- 0081  CD 21					int 21H
- 0083						rozkazy ENDS
-
- 00000000				nasz_stos SEGMENT stack
- 00000000  00000080 [				db 128 dup (?)
-	    00
-	   ]
- 0080					nasz_stos ENDS
-				END zacznij
-code.asm(109) : warning A4023:with /coff switch, leading underscore required for start address : zacznij
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    01/03/25 20:13:01
+ 00000015  5D					pop ebp
+ 00000016  C3					ret
+ 00000017				_pole_kola ENDP
+				END
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    01/07/25 19:28:51
 code.asm						     Symbols 2 - 1
 
 
@@ -126,26 +34,31 @@ Segments and Groups:
 
                 N a m e                 Size     Length   Align   Combine Class
 
-nasz_stos  . . . . . . . . . . .	32 Bit	 0080	  	  Stack	  
-rozkazy  . . . . . . . . . . . .	16 Bit	 0083	  	  Private 
+FLAT . . . . . . . . . . . . . .	GROUP
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000000 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 00000017 Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
 
                 N a m e                 Type     Value    Attr
 
-obsluga_zegara . . . . . . . . .	P Near	 0000	  rozkazy	Length= 0035 Public
-  wysw_dalej . . . . . . . . . .	L Near	 0022	  rozkazy	
+_pole_kola . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000017 Public
 
 
 Symbols:
 
                 N a m e                 Type     Value    Attr
 
-aktywne_oczekiwanie  . . . . . .	L Near	 0061	  rozkazy	
-licznik  . . . . . . . . . . . .	Word	 002F	  rozkazy	
-wektor8  . . . . . . . . . . . .	DWord	 0031	  rozkazy	
-zacznij  . . . . . . . . . . . .	L Near	 0035	  rozkazy	Public
+@CodeSize  . . . . . . . . . . .	Number	 00000000h   
+@DataSize  . . . . . . . . . . .	Number	 00000000h   
+@Interface . . . . . . . . . . .	Number	 00000000h   
+@Model . . . . . . . . . . . . .	Number	 00000007h   
+@code  . . . . . . . . . . . . .	Text   	 _TEXT
+@data  . . . . . . . . . . . . .	Text   	 FLAT
+@fardata?  . . . . . . . . . . .	Text   	 FLAT
+@fardata . . . . . . . . . . . .	Text   	 FLAT
+@stack . . . . . . . . . . . . .	Text   	 FLAT
 
-	   1 Warnings
+	   0 Warnings
 	   0 Errors
