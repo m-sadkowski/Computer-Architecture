@@ -1,9 +1,12 @@
 .686
 .model flat
-public suma
+public _suma@8
 
 .code
-	suma PROC stdcall, arg1:dword, arg2:dword
+	_suma@8 PROC
+		push ebp
+		mov ebp, esp
+
 		mov ecx, [ebp + 12] ; w ecx mamy n
 		cmp ecx, 0
 		jz koniec_rek ; jesli n = 0 to koniec rekurencji
@@ -14,7 +17,7 @@ public suma
 
 		push ecx ; zapisujemy n - 1
 		push esi ; zapisujemy adres tablicy
-		call suma 
+		call _suma@8 
 
 		mov esi, [ebp + 8] ; w esi mamy adres tablicy
 		add eax, [esi] ; do eax dodajemy m³odsza czêœæ liczby
@@ -26,8 +29,9 @@ public suma
 		xor edx, edx ; zerujemy edx
 
 	koniec:
+		pop ebp
 		ret 8
-	suma ENDP
+	_suma@8 ENDP
 END
 
 

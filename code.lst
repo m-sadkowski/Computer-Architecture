@@ -1,41 +1,88 @@
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    01/08/25 20:00:57
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    02/02/25 02:57:33
 code.asm						     Page 1 - 1
 
 
 				.686
 				.model flat
-				public _multiplyfloats
-				extern _MulDiv@12 : PROC
-
+				public suma
 
  00000000			.code
- 00000000				_multiplyfloats PROC
- 00000000  55					push ebp
- 00000001  8B EC				mov ebp, esp
- 00000003  53					push ebx
- 00000004  51					push ecx
+ 00000000				suma PROC stdcall, arg1:dword, arg2:dword
 
- 00000005  8B 45 08				mov eax, [ebp + 8] ; a
- 00000008  8B 4D 0C				mov ecx, [ebp + 12] ; b
- 0000000B  8B 5D 10				mov ebx, [ebp + 16] ; adres na wynik
+ 00000003  8B 4D 0C				mov ecx, [ebp + 12] ; w ecx mamy n
+ 00000006  83 F9 00				cmp ecx, 0
+ 00000009  74 18				jz koniec_rek ; jesli n = 0 to koniec rekurencji
 
- 0000000E  51					push ecx ; a
- 0000000F  50					push eax ; b
- 00000010  B8 00000001				mov eax, 1
- 00000015  50					push eax ; 0
- 00000016  E8 00000000 E			call _MulDiv@12 ; a * b / 1
- 0000001B  83 C4 0C				add esp, 12
+ 0000000B  8B 75 08				mov esi, [ebp + 8] ; w esi mamy adres tablicy
+ 0000000E  83 C6 08				add esi, 8 ; przesuwamy sie na nastepny element tablicy
+ 00000011  49					dec ecx ; zmniejszamy ilosc elementow
 
-						; w ebx pomno¿ona liczba
- 0000001E  89 1B				mov [ebx], ebx
+ 00000012  51					push ecx ; zapisujemy n - 1
+ 00000013  56					push esi ; zapisujemy adres tablicy
+ 00000014  E8 FFFFFFE7				call suma 
 
- 00000020  59					pop ecx
- 00000021  5B					pop ebx
- 00000022  5D					pop ebp
- 00000023  C3					ret
- 00000024				_multiplyfloats ENDP
+ 00000019  8B 75 08				mov esi, [ebp + 8] ; w esi mamy adres tablicy
+ 0000001C  03 06				add eax, [esi] ; do eax dodajemy m³odsza czêœæ liczby
+ 0000001E  13 56 04				adc edx, [esi + 4] ; do edx dodajemy starsza czêœæ liczby
+ 00000021  EB 04				jmp koniec
+
+ 00000023				koniec_rek:
+ 00000023  33 C0				xor eax, eax ; zerujemy eax
+ 00000025  33 D2				xor edx, edx ; zerujemy edx
+
+ 00000027				koniec:
+ 00000028  C2 0008				ret 8
+ 0000002B				suma ENDP
+code.asm(31) : warning A6004:procedure argument or local not referenced : arg1
+code.asm(31) : warning A6004:procedure argument or local not referenced : arg2
 				END
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    01/08/25 20:00:57
+
+
+
+
+
+
+
+
+
+				COMMENT | .code
+					_suma PROC
+						push ebp
+						mov ebp, esp
+						push esi 
+						push ecx
+
+						mov esi, [ebp + 8] ; adres tablicy
+						mov ecx, [ebp + 12] ; n
+
+						cmp ecx, 0
+						jbe koniec
+
+						; do edx i eax wpisujemy biezacy element z tablicy
+						mov edx, [esi + 4] ; starsza czêœæ
+						mov eax, [esi] ; m³odsza czêœæ
+
+						; dodajemy nastepny element z tablicy
+						add [esi + 8], eax
+						adc [esi + 12], edx
+
+						add esi, 8 ; przesuwamy indeks na nastepny element z tablicy
+						dec ecx ; zmniejszamy ilosc elementow
+
+						; wywolanie rekurencyjne dla n - 1 elementow od nastepnego elementu tablicy
+						push ecx
+						push esi
+						call _suma
+						add esp, 8
+
+					koniec:
+						pop ecx
+						pop esi
+						pop ebp
+						ret 
+					_suma ENDP
+				END |
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    02/02/25 02:57:33
 code.asm						     Symbols 2 - 1
 
 
@@ -47,14 +94,18 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 _DATA  . . . . . . . . . . . . .	32 Bit	 00000000 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 00000024 Para	  Public  'CODE'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000002B Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
 
                 N a m e                 Type     Value    Attr
 
-_multiplyfloats  . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000024 Public
+suma . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000002B Public STDCALL
+  arg1 . . . . . . . . . . . . .	DWord	 bp + 00000008
+  arg2 . . . . . . . . . . . . .	DWord	 bp + 0000000C
+  koniec_rek . . . . . . . . . .	L Near	 00000023 _TEXT	
+  koniec . . . . . . . . . . . .	L Near	 00000027 _TEXT	
 
 
 Symbols:
@@ -70,7 +121,6 @@ Symbols:
 @fardata?  . . . . . . . . . . .	Text   	 FLAT
 @fardata . . . . . . . . . . . .	Text   	 FLAT
 @stack . . . . . . . . . . . . .	Text   	 FLAT
-_MulDiv@12 . . . . . . . . . . .	L Near	 00000000 FLAT	External
 
-	   0 Warnings
+	   2 Warnings
 	   0 Errors

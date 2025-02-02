@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-extern long long __stdcall suma(long long[], unsigned int n);
+long long suma(long long[], unsigned int n);
 
 int main()
 {
