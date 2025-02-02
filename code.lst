@@ -1,88 +1,113 @@
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    02/02/25 02:57:33
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    02/02/25 18:15:03
 code.asm						     Page 1 - 1
 
 
 				.686
 				.model flat
-				public suma
+
+				extern _ExitProcess@4 : PROC
+				extern __write : PROC
+
+				public _main
+				public _sum_and_skip
+
+ 00000000			.data
+ 00000000  0000000C [			obszar db 12 dup (?)
+	    00
+	   ]
+ 0000000C 30 31 32 33 34		dekoder db '0123456789ABCDEF'
+	   35 36 37 38 39
+	   41 42 43 44 45
+	   46
 
  00000000			.code
- 00000000				suma PROC stdcall, arg1:dword, arg2:dword
+ 00000000				wyswietl_EAX_hex PROC
+						; wyœwietlanie zawartoœci rejestru EAX
+						; w postaci liczby szesnastkowej
+ 00000000  60					pusha ; przechowanie rejestrów
 
- 00000003  8B 4D 0C				mov ecx, [ebp + 12] ; w ecx mamy n
- 00000006  83 F9 00				cmp ecx, 0
- 00000009  74 18				jz koniec_rek ; jesli n = 0 to koniec rekurencji
+						; rezerwacja 12 bajtów na stosie (poprzez zmniejszenie
+						; rejestru ESP) przeznaczonych na tymczasowe przechowanie
+						; cyfr szesnastkowych wyœwietlanej liczby
+ 00000001  83 EC 0C				sub esp, 12
+ 00000004  8B FC				mov edi, esp ; adres zarezerwowanego obszaru
+						; pamiêci
+						; przygotowanie konwersji
+ 00000006  B9 00000008				mov ecx, 8 ; liczba obiegów pêtli konwersji
+ 0000000B  BE 00000001				mov esi, 1 ; indeks pocz¹tkowy u¿ywany przy
+						; zapisie cyfr
+						; pêtla konwersji
+ 00000010					ptl3hex:
+						; przesuniêcie cykliczne (obrót) rejestru EAX o 4 bity w lewo
+						; w szczególnoœci, w pierwszym obiegu pêtli bity nr 31 - 28
+						; rejestru EAX zostan¹ przesuniête na pozycje 3 - 0
+ 00000010  C1 C0 04				rol eax, 4
+						; wyodrêbnienie 4 najm³odszych bitów i odczytanie z tablicy
+						; 'dekoder' odpowiadaj¹cej im cyfry w zapisie szesnastkowym
+ 00000013  8B D8				mov ebx, eax ; kopiowanie EAX do EBX
+ 00000015  83 E3 0F				and ebx, 0000000FH ; zerowanie bitów 31 - 4 rej.EBX
 
- 0000000B  8B 75 08				mov esi, [ebp + 8] ; w esi mamy adres tablicy
- 0000000E  83 C6 08				add esi, 8 ; przesuwamy sie na nastepny element tablicy
- 00000011  49					dec ecx ; zmniejszamy ilosc elementow
+ 00000018  8A 93 0000000C R			mov dl, dekoder[ebx] ; pobranie cyfry z tablicy
+						; przes³anie cyfry do obszaru roboczego
+ 0000001E  88 14 37				mov [edi][esi], dl
+ 00000021  46					inc esi ;inkrementacja modyfikatora
+ 00000022  E2 EC				loop ptl3hex ; sterowanie pêtl¹
 
- 00000012  51					push ecx ; zapisujemy n - 1
- 00000013  56					push esi ; zapisujemy adres tablicy
- 00000014  E8 FFFFFFE7				call suma 
+						; wpisanie znaku nowego wiersza przed i po cyfrach
+ 00000024  C6 07 0A				mov byte PTR [edi][0], 10
+ 00000027  C6 47 09 0A				mov byte PTR [edi][9], 10
 
- 00000019  8B 75 08				mov esi, [ebp + 8] ; w esi mamy adres tablicy
- 0000001C  03 06				add eax, [esi] ; do eax dodajemy m³odsza czêœæ liczby
- 0000001E  13 56 04				adc edx, [esi + 4] ; do edx dodajemy starsza czêœæ liczby
- 00000021  EB 04				jmp koniec
+						; zamiana zer na spacje
+ 0000002B  B9 0000000A				mov ecx, 10 ; liczba obiegów pêtli
+ 00000030  BE 00000001				mov esi, 1 ; indeks pocz¹tkowy
+ 00000035				ptlzera:
+ 00000035  80 3C 37 30				cmp byte PTR [edi][esi], 30H ; sprawdzenie czy cyfra to 0
+ 00000039  74 02				je byl_zero ; skok, gdy napotkano 0
+ 0000003B  EB 07				jmp koniec_zer
+ 0000003D				byl_zero:
+ 0000003D  C6 04 37 20				mov byte PTR [edi][esi], 20H ; zamiana 0 na spacjê
+ 00000041  46					inc esi ; inkrementacja indeksu
+ 00000042  E2 F1				loop ptlzera ; sterowanie pêtl¹
+ 00000044				koniec_zer:
 
- 00000023				koniec_rek:
- 00000023  33 C0				xor eax, eax ; zerujemy eax
- 00000025  33 D2				xor edx, edx ; zerujemy edx
+						; wyœwietlenie przygotowanych cyfr
+ 00000044  6A 0A				push 10 ; 8 cyfr + 2 znaki nowego wiersza
+ 00000046  57					push edi ; adres obszaru roboczego
+ 00000047  6A 01				push 1 ; nr urz¹dzenia (tu: ekran)
+ 00000049  E8 00000000 E			call __write ; wyœwietlenie
+						; usuniêcie ze stosu 24 bajtów, w tym 12 bajtów zapisanych
+						; przez 3 rozkazy push przed rozkazem call
+						; i 12 bajtów zarezerwowanych na pocz¹tku podprogramu
+ 0000004E  83 C4 18				add esp, 24
 
- 00000027				koniec:
- 00000028  C2 0008				ret 8
- 0000002B				suma ENDP
-code.asm(31) : warning A6004:procedure argument or local not referenced : arg1
-code.asm(31) : warning A6004:procedure argument or local not referenced : arg2
+ 00000051  61					popa ; odtworzenie rejestrów
+ 00000052  C3					ret ; powrót z podprogramu
+ 00000053				wyswietl_EAX_hex ENDP
+					
+ 00000053				_sum_and_skip PROC
+ 00000053  53					push ebx
+ 00000054  8B 5C 24 04				mov ebx, [esp + 4]
+ 00000058  66| 8B 03				mov ax, word ptr [ebx]
+ 0000005B  66| 03 43 02				add ax, word ptr [ebx + 2]
+ 0000005F  5B					pop ebx
+ 00000060  83 04 24 04				add dword ptr [esp], 4
+ 00000064  C3					ret
+ 00000065				_sum_and_skip ENDP
+
+ 00000065				_main PROC
+ 00000065  33 C0				xor eax, eax
+ 00000067  E8 FFFFFFE7				call _sum_and_skip 
+ 0000006C  0023					dw 23h
+ 0000006E  0043					dw 43h
+ 00000070  90					nop
+ 00000071  E8 FFFFFF8A				call wyswietl_EAX_hex
+ 00000076  6A 00				push 0
+ 00000078  E8 00000000 E			call _ExitProcess@4
+ 0000007D				_main ENDP
 				END
 
 
-
-
-
-
-
-
-
-				COMMENT | .code
-					_suma PROC
-						push ebp
-						mov ebp, esp
-						push esi 
-						push ecx
-
-						mov esi, [ebp + 8] ; adres tablicy
-						mov ecx, [ebp + 12] ; n
-
-						cmp ecx, 0
-						jbe koniec
-
-						; do edx i eax wpisujemy biezacy element z tablicy
-						mov edx, [esi + 4] ; starsza czêœæ
-						mov eax, [esi] ; m³odsza czêœæ
-
-						; dodajemy nastepny element z tablicy
-						add [esi + 8], eax
-						adc [esi + 12], edx
-
-						add esi, 8 ; przesuwamy indeks na nastepny element z tablicy
-						dec ecx ; zmniejszamy ilosc elementow
-
-						; wywolanie rekurencyjne dla n - 1 elementow od nastepnego elementu tablicy
-						push ecx
-						push esi
-						call _suma
-						add esp, 8
-
-					koniec:
-						pop ecx
-						pop esi
-						pop ebp
-						ret 
-					_suma ENDP
-				END |
-Microsoft (R) Macro Assembler Version 14.38.33130.0	    02/02/25 02:57:33
+Microsoft (R) Macro Assembler Version 14.38.33130.0	    02/02/25 18:15:03
 code.asm						     Symbols 2 - 1
 
 
@@ -93,19 +118,21 @@ Segments and Groups:
                 N a m e                 Size     Length   Align   Combine Class
 
 FLAT . . . . . . . . . . . . . .	GROUP
-_DATA  . . . . . . . . . . . . .	32 Bit	 00000000 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 0000002B Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 0000001C Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000007D Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
 
                 N a m e                 Type     Value    Attr
 
-suma . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000002B Public STDCALL
-  arg1 . . . . . . . . . . . . .	DWord	 bp + 00000008
-  arg2 . . . . . . . . . . . . .	DWord	 bp + 0000000C
-  koniec_rek . . . . . . . . . .	L Near	 00000023 _TEXT	
-  koniec . . . . . . . . . . . .	L Near	 00000027 _TEXT	
+_main  . . . . . . . . . . . . .	P Near	 00000065 _TEXT	Length= 00000018 Public
+_sum_and_skip  . . . . . . . . .	P Near	 00000053 _TEXT	Length= 00000012 Public
+wyswietl_EAX_hex . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000053 Public
+  ptl3hex  . . . . . . . . . . .	L Near	 00000010 _TEXT	
+  ptlzera  . . . . . . . . . . .	L Near	 00000035 _TEXT	
+  byl_zero . . . . . . . . . . .	L Near	 0000003D _TEXT	
+  koniec_zer . . . . . . . . . .	L Near	 00000044 _TEXT	
 
 
 Symbols:
@@ -121,6 +148,10 @@ Symbols:
 @fardata?  . . . . . . . . . . .	Text   	 FLAT
 @fardata . . . . . . . . . . . .	Text   	 FLAT
 @stack . . . . . . . . . . . . .	Text   	 FLAT
+_ExitProcess@4 . . . . . . . . .	L Near	 00000000 FLAT	External
+__write  . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+dekoder  . . . . . . . . . . . .	Byte	 0000000C _DATA	
+obszar . . . . . . . . . . . . .	Byte	 00000000 _DATA	
 
-	   2 Warnings
+	   0 Warnings
 	   0 Errors

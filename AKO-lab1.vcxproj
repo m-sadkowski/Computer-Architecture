@@ -21,9 +21,6 @@
   <ItemGroup>
     <MASM Include="code.asm" />
   </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="main.c" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -87,6 +84,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalOptions>libcmt.lib %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <MASM>
       <AdditionalOptions>-Fl %(AdditionalOptions)</AdditionalOptions>
