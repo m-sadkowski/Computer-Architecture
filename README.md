@@ -1,8 +1,8 @@
-# Computer Architecture - Lab Codes
+# Computer Architecture - Codes and materials
 
 ## Description
 
-This repository contains code and resources for the **Computer Architecture** lab sessions. Topics covered include fundamental computer architecture concepts, assembly language programming, memory management, CPU operation modes, data encoding, and hardware interfaces.
+This repository contains code and resources for the **Computer Architecture**. Topics covered include fundamental computer architecture concepts, assembly language programming, memory management, CPU operation modes, data encoding, and hardware interfaces.
 
 ## Topics
 
